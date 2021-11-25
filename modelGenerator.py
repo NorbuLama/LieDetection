@@ -1,16 +1,17 @@
 #### Dependencies ####
 
-import IPython.display as ipd
 import joblib
 import numpy as np
 import pandas as pd
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-from scipy.io import wavfile as wav
 from glob import glob
 from sklearn.model_selection import train_test_split
-import json
+from sklearn import svm
+from sklearn import metrics
+
+from sklearn.metrics import classification_report
 
 filepath1 = "/Users/norbulama/Desktop/CS-4000/audios/lie/"
 filepath2 = "/Users/norbulama/Desktop/CS-4000/audios/truth"
@@ -24,45 +25,208 @@ def extract_features(file_name):
     mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=40)
     mfccs_processed = np.mean(mfccs.T, axis=0)
 
-    return mfccs_processed
+    mel_spectogram = librosa.feature.melspectrogram(y = audio, sr=sample_rate, n_fft=2048, hop_length=512, n_mels = 10)  #mel spectogram
+    mel_spectogram_processed = np.mean(mel_spectogram.T, axis=0)
+
+    tonnetz = librosa.feature.tonnetz(y=audio, sr=sample_rate)  #tonal centroid feature
+    tonnetz_processed = np.mean(tonnetz.T, axis=0)
+
+    rms = librosa.feature.rms(y=audio)  #root mean square
+    rms_processed = np.mean(rms.T, axis=0)
+
+    cent = librosa.feature.spectral_centroid(y=audio, sr=sample_rate)  # spectral centroid
+    cent_processed = np.mean(cent.T, axis=0)
+
+    chroma_stft = librosa.feature.chroma_stft(y=audio, sr=sample_rate)
+    chroma_stft_processed = np.mean(chroma_stft.T, axis=0)
+
+    return [mfccs_processed, mel_spectogram_processed, tonnetz_processed, rms_processed, cent_processed, chroma_stft_processed]
 
 
-features = []
+mfcc_features = []
+melspectogram_features = []
+tonnetz_features = []
+rms_features = []
+cent_features = []
+chroma_stft_features = []
+
 
 # Iterate through each sound file and extract the features
 for i in audiopath1:
     data = extract_features(i)
-    features.append([data, "lie"])
+    mfcc_features.append([data[0], "lie"])
+    melspectogram_features.append([data[1], "lie"])
+    tonnetz_features.append([data[2], "lie"])
+    rms_features.append([data[3], "lie"])
+    cent_features.append([data[4], "lie"])
+    chroma_stft_features.append([data[5], "lie"])
+
+
+    # melspectogram_features.append([mel, 'lie'])
 for i in audiopath2:
     data = extract_features(i)
-    features.append([data, "truth"])
-
+    mfcc_features.append([data[0], "truth"])
+    melspectogram_features.append([data[1], "truth"])
+    tonnetz_features.append([data[2], "truth"])
+    rms_features.append([data[3], "truth"])
+    cent_features.append([data[4], "truth"])
+    chroma_stft_features.append([data[5], "truth"])
 
 # Convert into a Panda dataframe
-featuresdf = pd.DataFrame(features, columns=['feature','class_label'])
-featuresdf.head()
+mfccfeaturesdf = pd.DataFrame(mfcc_features, columns=['feature', 'class_label'])
+print(mfccfeaturesdf.head())
+melspectogram_featuresdf = pd.DataFrame(melspectogram_features, columns=['feature', 'class_label'])
+print(melspectogram_featuresdf.head())
+
+tonnetz_featuresdf = pd.DataFrame(tonnetz_features, columns=['feature', 'class_label'])
+print(tonnetz_featuresdf.head())
+
+rms_featuresdf = pd.DataFrame(rms_features, columns=['feature', 'class_label'])
+print(rms_featuresdf.head())
+cent_featuresdf = pd.DataFrame(cent_features, columns=['feature', 'class_label'])
+print(cent_featuresdf.head())
+chroma_stft_featuresdf = pd.DataFrame(chroma_stft_features, columns=['feature', 'class_label'])
+print(chroma_stft_featuresdf.head())
+
+# mfccfeaturesdf.head()
 
 
-X = np.array(featuresdf['feature'].tolist())
-y = np.array(featuresdf['class_label'].tolist())
+def mfccmodel():
+    X = np.array(mfccfeaturesdf['feature'].tolist())
+    y = np.array(mfccfeaturesdf['class_label'].tolist())
+
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
 
 
-# Train test saplit
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.2, random_state=4)
+    classifier = svm.SVC(kernel='linear', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'mfccmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print(classification_report(y_test, y_predict))
+
+    c_matrix = metrics.confusion_matrix(y_test, y_predict)
+
+    print("Confusion matrix for mfcc model\n", c_matrix)
 
 
-from sklearn import svm
 
-classifier = svm.SVC(kernel = 'linear', gamma='auto', C=2)
-classifier.fit(X_train, y_train)
+def melspecmodel():
+    X = np.array(melspectogram_featuresdf['feature'].tolist())
+    y = np.array(melspectogram_featuresdf['class_label'].tolist())
 
-filename = 'classifier_model.pkl'
-joblib.dump(classifier, filename)
-
-print(classifier.fit(X_train, y_train))
-
-y_predict = classifier.predict(X_test)
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 
 
-from sklearn.metrics import classification_report
-print(classification_report(y_test, y_predict))
+    classifier = svm.SVC(kernel='linear', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'melspecmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print("Test result based on mel Spectogram\n")
+    print(classification_report(y_test, y_predict))
+
+    c_matrix = metrics.confusion_matrix(y_test, y_predict)
+
+    print("Confusion matrix for mel cpectrogram model\n", c_matrix)
+
+def tonnetzmodel():
+    X = np.array(tonnetz_featuresdf['feature'].tolist())
+    y = np.array(tonnetz_featuresdf['class_label'].tolist())
+
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+
+
+    classifier = svm.SVC(kernel='rbf', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'tonnetzmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print("Test result based on mel tonnetz\n")
+    print(classification_report(y_test, y_predict))
+
+
+def rmsmodel():
+    X = np.array(rms_featuresdf['feature'].tolist())
+    y = np.array(rms_featuresdf['class_label'].tolist())
+
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=2)
+
+    classifier = svm.SVC(kernel='linear', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'rmsmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print("Test result based on rms\n")
+    print(classification_report(y_test, y_predict))
+
+
+def centmodel():
+    X = np.array(cent_featuresdf['feature'].tolist())
+    y = np.array(cent_featuresdf['class_label'].tolist())
+
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
+
+    classifier = svm.SVC(kernel='linear', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'centmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print("Test result based on cent\n")
+    print(classification_report(y_test, y_predict))
+
+
+def chromastftmodel():
+    X = np.array(chroma_stft_featuresdf['feature'].tolist())
+    y = np.array(chroma_stft_featuresdf['class_label'].tolist())
+
+    # Train test saplit
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=2)
+
+    classifier = svm.SVC(kernel='linear', gamma='auto', C=2)
+    classifier.fit(X_train, y_train)
+
+    filename = 'chromastftmodel.sav'
+    joblib.dump(classifier, filename)
+
+    print(classifier.fit(X_train, y_train))
+
+    y_predict = classifier.predict(X_test)
+    print("Test result based on chromastftmodel\n")
+    print(classification_report(y_test, y_predict))
+
+    c_matrix = metrics.confusion_matrix(y_test, y_predict)
+
+    print("Confusion matrix for chromastftmodel \n", c_matrix)
+
+mfccmodel()
+melspecmodel()
+# rmsmodel()
+# tonnetzmodel()
+# centmodel()
+chromastftmodel()
