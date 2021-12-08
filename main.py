@@ -23,17 +23,17 @@ sd.wait()  # Wait until recording is finished
 write('/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/output1.wav', fs,
       myrecording)  # Save as WAV file
 
-# print("Record the second sample")
-# myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2)
-# sd.wait()  # Wait until recording is finished
-# write('/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/output2.wav', fs,
-#       myrecording)  # Save as WAV file
-#
-# print("Record the third sample")
-# myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2)
-# sd.wait()  # Wait until recording is finished
-# write('/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/output3.wav', fs,
-#       myrecording)  # Save as WAV file
+print("Record the second sample")
+myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2)
+sd.wait()  # Wait until recording is finished
+write('/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/output2.wav', fs,
+      myrecording)  # Save as WAV file
+
+print("Record the third sample")
+myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2)
+sd.wait()  # Wait until recording is finished
+write('/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/output3.wav', fs,
+      myrecording)  # Save as WAV file
 
 userInput_path = '/Users/norbulama/Desktop/CS-4000/TruthOrLieAutomation/userInput/'
 useraudiopath1 = glob(userInput_path + "/*.wav")
